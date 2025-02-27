@@ -1,0 +1,5 @@
+services:
+  farm_grazing_plan:
+    class: Drupal\farm_grazing_plan\GrazingPlan
+    arguments:
+      [ '@entity_type.manager', '@farm.log_query', '@log.location' ]
