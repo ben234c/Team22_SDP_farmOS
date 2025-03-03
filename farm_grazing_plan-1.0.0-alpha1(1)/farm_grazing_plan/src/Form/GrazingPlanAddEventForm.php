@@ -128,10 +128,22 @@ class GrazingPlanAddEventForm extends FormBase {
     }
     $default_values = $this->grazingEventDefaultValues($log);
 
-    $form['details']['start'] = [
+    $form['details']['start'] = [ 
       '#type' => 'datetime',
       '#title' => $this->t('Planned start date/time'),
       '#default_value' => $default_values['start'],
+      '#required' => TRUE,
+    ];
+
+    // NEW
+    $form['planned'] = [ 
+      '#type' => 'radios',
+      '#title' => $this->t('Actual/Planned'),
+      // '#options' => array(t('Actual'), t('Planned')),
+      '#options' => [
+        0 => $this->t('Actual2'),
+        1 => $this->t('Planned2'),
+      ],
       '#required' => TRUE,
     ];
 
@@ -253,6 +265,8 @@ class GrazingPlanAddEventForm extends FormBase {
       'start' => $form_state->getValue('start')->getTimestamp(),
       'duration' => $form_state->getValue('duration'),
       'recovery' => $form_state->getValue('recovery'),
+      // NEW
+      'planned' => $form_state->getValue('planned'),
     ]);
     $record->save();
     $this->messenger()->addMessage($this->t('Added @grazing_event', ['@grazing_event' => $record->label()]));
