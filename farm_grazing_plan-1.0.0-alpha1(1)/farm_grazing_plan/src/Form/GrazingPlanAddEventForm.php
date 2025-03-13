@@ -238,12 +238,33 @@ class GrazingPlanAddEventForm extends FormBase {
     if ($existing > 0) {
       $form_state->setErrorByName('log', $this->t('This log is already part of the plan.'));
     }
+
+    //Checking for time conflicts ADDED
+    \Drupal::logger('farm_grazing_plan')->debug('Form values: ' . json_encode($form_state->getValues()));
+    $start_time = $form_state->getValue('start')->getTimestamp();
+    //\Drupal::logger('farm_grazing_plan')->debug('Start time: ' . json_encode($start_time->getValues()));
+    $query = $this->entityTypeManager->getStorage('log')->getQuery()
+      ->accessCheck(FALSE)
+      ->condition('timestamp', $start_time);
+
+      if($log){
+        $query->condition('id', $log, '!=');
+      }
+      $results = $query->execute();
+      if(!empty($results)){
+        $form_state->setErrorByName('details][start', $this->t("this time conflicts with an existing log :("));
+        return;
+      }
+
   }
 
   /**
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+    if ($form_state->hasAnyErrors()){
+      return;
+    }
     $plan_id = $form_state->get('plan_id');
     $log = $form_state->getValue('log');
     $record = PlanRecord::create([
@@ -257,6 +278,7 @@ class GrazingPlanAddEventForm extends FormBase {
     $record->save();
     $this->messenger()->addMessage($this->t('Added @grazing_event', ['@grazing_event' => $record->label()]));
     $form_state->setRedirect('entity.plan.canonical', ['plan' => $plan_id]);
-  }
+    }
+    
 
 }
