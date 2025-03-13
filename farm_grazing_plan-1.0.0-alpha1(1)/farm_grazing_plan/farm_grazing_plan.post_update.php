@@ -10,6 +10,12 @@ declare(strict_types=1);
 /**
  * Add "My new field" to logs.
  */
+
+ /**
+  * Change name each time it is run. drush will not execute functions that have previously been executed through "drush updb".
+  * https://drupal.stackexchange.com/questions/315086/hook-post-update-not-found
+  */
+
 function farm_grazing_plan_post_update_add_planned2(&$planned) {
   $options = [
     'type' => 'integer',
