@@ -54,6 +54,13 @@ class GrazingPlanTimeline extends ControllerBase {
    * @var \Symfony\Component\Serializer\SerializerInterface
    */
   protected $serializer;
+  
+   /**
+   * The state service for checking the overlap setting.
+   *
+   * @var \Drupal\Core\State\StateInterface
+   */
+  protected $state;
 
   /**
    * GrazingPlanTimeline constructor.
@@ -69,12 +76,13 @@ class GrazingPlanTimeline extends ControllerBase {
    * @param \Symfony\Component\Serializer\SerializerInterface $serializer
    *   The serializer service.
    */
-  public function __construct(GrazingPlanInterface $grazing_plan, AssetLogsInterface $asset_logs, UuidInterface $uuid_service, TypedDataManagerInterface $typed_data_manager, SerializerInterface $serializer) {
+  public function __construct(GrazingPlanInterface $grazing_plan, AssetLogsInterface $asset_logs, UuidInterface $uuid_service, TypedDataManagerInterface $typed_data_manager, SerializerInterface $serializer, StateInterface $state) {
     $this->grazingPlan = $grazing_plan;
     $this->assetLogs = $asset_logs;
     $this->uuidService = $uuid_service;
     $this->typedDataManager = $typed_data_manager;
     $this->serializer = $serializer;
+    $this->state = $state;
   }
 
   /**
@@ -87,6 +95,7 @@ class GrazingPlanTimeline extends ControllerBase {
       $container->get('uuid'),
       $container->get('typed_data_manager'),
       $container->get('serializer'),
+      $container->get( 'state')
     );
   }
 
@@ -132,6 +141,8 @@ class GrazingPlanTimeline extends ControllerBase {
    *   Json response of timeline data.
    */
   protected function buildTimeline(PlanInterface $plan, array $grazing_events_by_asset) {
+    $shift_overlapping = $this->state->get('log_reschedule.shift_overlapping', FALSE);
+
     $data = [];
     foreach ($grazing_events_by_asset as $asset_id => $grazing_events) {
 
@@ -157,6 +168,11 @@ class GrazingPlanTimeline extends ControllerBase {
       /** @var \Drupal\farm_grazing_plan\Bundle\GrazingEventInterface[] $grazing_events */
       foreach ($grazing_events as $grazing_event) {
         $row_values['children'][] = $this->buildGrazingEventRow($grazing_event);
+        if ($shift_overlapping) {
+          \Drupal::logger('buildTimeline')->notice("Running shiftOverlappingLogs() in buildTimeline");
+    
+          $this->shiftOverlappingLogs($grazing_events_by_asset);  
+        }
       }
 
       // Add the row object.
@@ -272,5 +288,28 @@ class GrazingPlanTimeline extends ControllerBase {
       ],
     ];
   }
-
+protected function shiftOverlappingLogs(array $grazing_events_by_asset) {
+    foreach ($grazing_events_by_asset as $asset_id => $grazing_events) {
+        if (!empty($grazing_events)) {
+          $first_event = reset($grazing_events); // Get first event
+          $last_end_time = $first_event->get('start')->value;
+        } else {
+            continue;
+        }
+        foreach ($grazing_events as $grazing_event) {
+            $start_time = $grazing_event->get('start')->value;
+            $duration = $grazing_event->hasField('duration') ? $grazing_event->get('duration')->value * 3600 : 0;
+            $recovery = $grazing_event->hasField('recovery') ? $grazing_event->get('recovery')->value * 3600 : 0;
+            if ($start_time < $last_end_time){
+              $new_start_time = $last_end_time;
+              $grazing_event->set('start', $new_start_time);
+              $grazing_event->save();
+              \Drupal::logger('log')->notice("Shifted Grazing Event ID {$grazing_event->id()} to start at " . date('Y-m-d H:i:s', $new_start_time));
+            }
+            $last_end_time = $start_time + $duration + $recovery;
+        }
+      
+    }
+  
+}
 }
