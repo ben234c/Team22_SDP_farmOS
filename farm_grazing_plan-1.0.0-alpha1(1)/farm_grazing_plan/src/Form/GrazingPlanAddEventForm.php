@@ -136,14 +136,14 @@ class GrazingPlanAddEventForm extends FormBase {
     ];
 
     // NEW
-    $form['planned'] = [ 
+    $form['details']['planned'] = [ 
       '#type' => 'radios',
       '#title' => $this->t('Actual/Planned'),
-      // '#options' => array(t('Actual'), t('Planned')),
       '#options' => [
         0 => $this->t('Actual2'),
         1 => $this->t('Planned2'),
       ],
+      '#default_value' => $default_values['planned'],
       '#required' => TRUE,
     ];
 
@@ -187,6 +187,8 @@ class GrazingPlanAddEventForm extends FormBase {
   public function resetGrazingEventDetails(FormStateInterface $form_state) {
     $details_fields = [
       'start',
+      // NEW
+      'planned',
       'duration',
       'recovery',
     ];
@@ -217,6 +219,7 @@ class GrazingPlanAddEventForm extends FormBase {
       'start' => new DrupalDateTime('midnight', $this->currentUser()->getTimeZone()),
       'duration' => NULL,
       'recovery' => NULL,
+      'planned' => 0,
     ];
 
     // If a log was provided, load the start date from it.
