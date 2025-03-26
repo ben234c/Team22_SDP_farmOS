@@ -166,13 +166,17 @@ class GrazingPlanTimeline extends ControllerBase {
 
       // Include each grazing event record.
       /** @var \Drupal\farm_grazing_plan\Bundle\GrazingEventInterface[] $grazing_events */
+     if ($shift_overlapping) {
+        \Drupal::logger('buildTimeline')->notice("Running shiftOverlappingLogs() in buildTimeline");
+  
+        $this->shiftOverlappingLogs($grazing_events_by_asset);  
+      }
+
       foreach ($grazing_events as $grazing_event) {
         $row_values['children'][] = $this->buildGrazingEventRow($grazing_event);
-        if ($shift_overlapping) {
-          \Drupal::logger('buildTimeline')->notice("Running shiftOverlappingLogs() in buildTimeline");
-    
-          $this->shiftOverlappingLogs($grazing_events_by_asset);  
-        }
+          usort($row_values['children'], function ($a, $b) {
+            return $a['tasks'][0]['start'] <=> $b['tasks'][0]['start'];
+          });
       }
 
       // Add the row object.
@@ -290,21 +294,24 @@ class GrazingPlanTimeline extends ControllerBase {
   }
 protected function shiftOverlappingLogs(array $grazing_events_by_asset) {
     foreach ($grazing_events_by_asset as $asset_id => $grazing_events) {
-        if (!empty($grazing_events)) {
-          $first_event = reset($grazing_events); // Get first event
-          $last_end_time = $first_event->get('start')->value;
-        } else {
-            continue;
-        }
+        if (empty($grazing_events)) {
+        continue;
+      }
+  
+      // Sort the grazing events by start time within each asset
+      usort($grazing_events, function ($a, $b) {
+        return $a->get('start')->value <=> $b->get('start')->value;
+      });
+      $last_end_time = null;
         foreach ($grazing_events as $grazing_event) {
             $start_time = $grazing_event->get('start')->value;
             $duration = $grazing_event->hasField('duration') ? $grazing_event->get('duration')->value * 3600 : 0;
             $recovery = $grazing_event->hasField('recovery') ? $grazing_event->get('recovery')->value * 3600 : 0;
-            if ($start_time < $last_end_time){
-              $new_start_time = $last_end_time;
-              $grazing_event->set('start', $new_start_time);
+            if ($start_time <= $last_end_time){
+              $grazing_event->set('start', $last_end_time);
               $grazing_event->save();
-              \Drupal::logger('log')->notice("Shifted Grazing Event ID {$grazing_event->id()} to start at " . date('Y-m-d H:i:s', $new_start_time));
+              \Drupal::logger('log')->notice("Shifted Grazing Event ID {$grazing_event->id()} to start at " . date('Y-m-d H:i:s', $last_end_time));
+              $start_time = $last_end_time;
             }
             $last_end_time = $start_time + $duration + $recovery;
         }
