@@ -48,7 +48,7 @@ class GrazingEvent extends FarmPlanRecordType {
       ],
       'planned' => [
         'type' => 'integer',
-        'label' => $this->t('Planned34567'),
+        'label' => $this->t('Planned'),
         'min' => 0,
         'max' => 1,
         'required' => TRUE,

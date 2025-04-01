@@ -138,10 +138,10 @@ class GrazingPlanAddEventForm extends FormBase {
     // NEW
     $form['details']['planned'] = [ 
       '#type' => 'radios',
-      '#title' => $this->t('Actual/Planned'),
+      '#title' => $this->t('Planned/Actual'),
       '#options' => [
-        0 => $this->t('Actual2'),
-        1 => $this->t('Planned2'),
+        0 => $this->t('Planned'),
+        1 => $this->t('Actual'),
       ],
       '#default_value' => $default_values['planned'],
       '#required' => TRUE,
