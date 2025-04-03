@@ -233,78 +233,72 @@ class GrazingPlanAddEventForm extends FormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
-
     // Require log.
-    $log = $form_state->getValue('log');
-    if (empty($log)) {
+    $log_id = $form_state->getValue('log');
+    if (empty($log_id)) {
       $form_state->setErrorByName('log', $this->t('Select a movement log.'));
       return;
     }
-
+  
     // Check for existing grazing_event records for the plan and log.
     $plan_id = $form_state->get('plan_id');
     $existing = $this->entityTypeManager->getStorage('plan_record')->getQuery()
       ->accessCheck(FALSE)
       ->condition('plan', $plan_id)
-      ->condition('log', $log)
+      ->condition('log', $log_id)
       ->count()
       ->execute();
     if ($existing > 0) {
       $form_state->setErrorByName('log', $this->t('This log is already part of the plan.'));
     }
-
-    //Checking for time conflicts ADDED
-
     \Drupal::logger('farm_grazing_plan')->debug('Form values: ' . json_encode($form_state->getValues()));
-    
-    $start_time = $form_state->getValue('start')->getTimestamp();
-    $duration_time = $form_state->getValue('duration');
-    $end_timestamp = $start_time + ($duration_time * 3600);
-    //new start time would be greater than the original start time and less than the orignal end time 
-    //edge case for the first log
-    //\Drupal::logger('farm_grazing_plan')->debug('Start time: ' . json_encode($start_time->getValues()));
-    $disable_alert = !$form_state->getValue('enable_time_conflict');
-    $log_ids = $this->entityTypeManager->getStorage('log')->getQuery()
-      ->accessCheck(FALSE)
-      ->execute();
-      //ORIGINALTIMESTAMPLESS THAN NEW END TIMESTAMP
-      //->condition('timestamp.value', $end_timestamp, "<=")
-      //ORINGAL TIMESTAMP LESS THAN NEW START TIME / NEW START TIME GREAT THAN ORIGINAL
-      //->condition('timestamp', $start_time, "<=");
-    $logs = $this->entityTypeManager->getStorage('log')->loadMultiple($log_ids);
-    $current_log = $form_state->getValue('log');
-    foreach ($logs as $existing_log){
-      if($existing_log->id() == $current_log_id){
-        continue;
-      }
-      $existing_start = $existing_log->get('timestamp')->value;
-      $existing_duration = $exisiting_log->get('duration')->value;
-      $existing_end = $exisiting_start + ($existing_duration * 3600);
-      if ($exisiting_start <= $end_timestamp && $existing_end >= $start_time && $disable_alert){
-        $form_state->setErrorByName('details][start', $this->t("This time conflicts with an existing log."));
-        break;
-      }
-    } 
-   // if($log){
-    //  $query->condition('id', $log, '!=');
-    //}
-   // \Drupal::logger('farm_grazing_plan')->debug('Timestamp value: @timestamp', ['@timestamp' => $timestamp_value]);
-    //$timestamp_value = $log->getValue('timestamp')->value;
 
-    // Print it.
-   // print $timestamp_value;
-    $results = $query->execute();
-      //if($log){
-        //$query->condition('id', $log, '!=');
-      //}
-      // $results = $query->execute();
-   //   if(!empty($results) && $disable_alert){
-       // $form_state->setErrorByName('details][start', $this->t("this time conflicts with an existing log :("));
-       // return;
-      //}
-
+    // Only check for time conflicts if the enable_time_conflict checkbox is NOT checked
+    if (!$form_state->getValue('enable_time_conflict')) {
+      $start_time = $form_state->getValue('start')->getTimestamp();
+      $duration_hours = $form_state->getValue('duration');
+      $end_timestamp = $start_time + (intval($duration_hours) * 3600);
+      
+      // Log for debugging
+      \Drupal::logger('farm_grazing_plan')->debug('Checking time conflicts: Start @start, End @end', [
+        '@start' => date('Y-m-d H:i:s', $start_time),
+        '@end' => date('Y-m-d H:i:s', $end_timestamp),
+      ]);
+      
+      // Load all plan records of type grazing_event
+      $record_ids = $this->entityTypeManager->getStorage('plan_record')->getQuery()
+        ->accessCheck(FALSE)
+        ->condition('type', 'grazing_event')
+        ->condition('plan', $plan_id)
+        ->execute();
+        
+      if (!empty($record_ids)) {
+        $records = $this->entityTypeManager->getStorage('plan_record')->loadMultiple($record_ids);
+        
+        foreach ($records as $existing_record) {
+          // Skip if this is the same log
+          if ($existing_record->get('log')->target_id == $log_id) {
+            continue;
+          }
+          
+          $existing_start = $existing_record->get('start')->value;
+          $existing_duration = $existing_record->get('duration')->value;
+          
+          if (empty($existing_duration)) {
+            continue; // Skip if no duration
+          }
+          
+          $existing_end = $existing_start + ($existing_duration * 3600);
+          
+          // checking for conflict -- new start is before existing end AND new end is after existing start
+          if ($start_time < $existing_end && $end_timestamp > $existing_start) {
+            $form_state->setErrorByName('details][start', $this->t("This time conflicts with an existing log",));
+            break;
+          }
+        }
+      }
+    }
   }
-
   /**
    * {@inheritdoc}
    */
