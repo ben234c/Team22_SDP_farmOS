@@ -240,21 +240,54 @@ class GrazingPlanAddEventForm extends FormBase {
     }
 
     //Checking for time conflicts ADDED
-    \Drupal::logger('farm_grazing_plan')->debug('Form values: ' . json_encode($form_state->getValues()));
-    $start_time = $form_state->getValue('start')->getTimestamp();
-    //\Drupal::logger('farm_grazing_plan')->debug('Start time: ' . json_encode($start_time->getValues()));
-    $query = $this->entityTypeManager->getStorage('log')->getQuery()
-      ->accessCheck(FALSE)
-      ->condition('timestamp', $start_time);
 
-      if($log){
-        $query->condition('id', $log, '!=');
+    \Drupal::logger('farm_grazing_plan')->debug('Form values: ' . json_encode($form_state->getValues()));
+    
+    $start_time = $form_state->getValue('start')->getTimestamp();
+    $duration_time = $form_state->getValue('duration');
+    $end_timestamp = $start_time + ($duration_time * 3600);
+    //new start time would be greater than the original start time and less than the orignal end time 
+    //edge case for the first log
+    //\Drupal::logger('farm_grazing_plan')->debug('Start time: ' . json_encode($start_time->getValues()));
+    $disable_alert = !$form_state->getValue('enable_time_conflict');
+    $log_ids = $this->entityTypeManager->getStorage('log')->getQuery()
+      ->accessCheck(FALSE)
+      ->execute();
+      //ORIGINALTIMESTAMPLESS THAN NEW END TIMESTAMP
+      //->condition('timestamp.value', $end_timestamp, "<=")
+      //ORINGAL TIMESTAMP LESS THAN NEW START TIME / NEW START TIME GREAT THAN ORIGINAL
+      //->condition('timestamp', $start_time, "<=");
+    $logs = $this->entityTypeManager->getStorage('log')->loadMultiple($log_ids);
+    $current_log = $form_state->getValue('log');
+    foreach ($logs as $existing_log){
+      if($existing_log->id() == $current_log_id){
+        continue;
       }
-      $results = $query->execute();
-      if(!empty($results)){
-        $form_state->setErrorByName('details][start', $this->t("this time conflicts with an existing log :("));
-        return;
+      $existing_start = $existing_log->get('timestamp')->value;
+      $existing_duration = $exisiting_log->get('duration')->value;
+      $existing_end = $exisiting_start + ($existing_duration * 3600);
+      if ($exisiting_start <= $end_timestamp && $existing_end >= $start_time && $disable_alert){
+        $form_state->setErrorByName('details][start', $this->t("This time conflicts with an existing log."));
+        break;
       }
+    } 
+   // if($log){
+    //  $query->condition('id', $log, '!=');
+    //}
+   // \Drupal::logger('farm_grazing_plan')->debug('Timestamp value: @timestamp', ['@timestamp' => $timestamp_value]);
+    //$timestamp_value = $log->getValue('timestamp')->value;
+
+    // Print it.
+   // print $timestamp_value;
+    $results = $query->execute();
+      //if($log){
+        //$query->condition('id', $log, '!=');
+      //}
+      // $results = $query->execute();
+   //   if(!empty($results) && $disable_alert){
+       // $form_state->setErrorByName('details][start', $this->t("this time conflicts with an existing log :("));
+       // return;
+      //}
 
   }
 
