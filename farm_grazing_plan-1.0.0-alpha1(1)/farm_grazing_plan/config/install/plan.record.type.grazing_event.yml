@@ -1,0 +1,9 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - farm_grazing_plan
+id: grazing_event
+label: Grazing event
+description: 'Relationship between a Grazing plan and movement logs with metadata.'
