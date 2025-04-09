@@ -1,0 +1,13 @@
+name: Grazing plan
+description: Grazing plan type and related features for farmOS.
+type: module
+package: farmOS Contrib
+core_version_requirement: ^10
+dependencies:
+  - farm_activity
+  - farm_animal
+  - farm_entity
+  - farm_location
+  - farm_season
+  - farm_timeline
+  - plan
