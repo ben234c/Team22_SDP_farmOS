@@ -72,8 +72,11 @@ class GrazingPlanRemoveEventForm extends FormBase {
         $options = [];
 
         foreach ($grazing_events as $grazing_event) {
-            $options[] = $grazing_event->label();
-            $form_state->set($grazing_event->label()->render(), $grazing_event->id());
+            $label = $grazing_event->label();
+
+            //associative array so that setting '#default_value' works
+            $options[$label->render()] = $label;
+            $form_state->set($label->render(), $grazing_event->id());
         }
 
         return $options;
@@ -98,7 +101,7 @@ class GrazingPlanRemoveEventForm extends FormBase {
     /**
      * {@inheritdoc}
      */
-    public function buildForm(array $form, FormStateInterface $form_state, ?PlanInterface $plan = NULL) {
+    public function buildForm(array $form, FormStateInterface $form_state, ?PlanInterface $plan = NULL, ?string $assetId = NULL) {
         if (empty($plan)) {
             return $form;
         }
@@ -110,6 +113,14 @@ class GrazingPlanRemoveEventForm extends FormBase {
             '#options' => $this->loadGrazingEvents($plan, $form_state),
             '#required' => TRUE,
         ];
+
+        //populate event value if assetId was provided
+        if (!empty($assetId)) {
+            $asset = $this->entityTypeManager->getStorage('plan_record')->load($assetId);
+            if (!empty($asset)) {
+                $form['event']['#default_value'] = $asset->label()->render();
+            }
+        }
 
         $form['scope'] = [
             '#type' => 'radios',

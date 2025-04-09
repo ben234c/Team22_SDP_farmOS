@@ -5,6 +5,7 @@ namespace Drupal\farm_grazing_plan\Controller;
 use Drupal\Component\Uuid\UuidInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\Core\Link;
 use Drupal\farm_grazing_plan\Bundle\GrazingEventInterface;
 use Drupal\farm_grazing_plan\GrazingPlanInterface;
 use Drupal\farm_log\AssetLogsInterface;
@@ -233,6 +234,7 @@ class GrazingPlanTimeline extends ControllerBase {
       'label' => $log->label(),
       'link' => $log->toLink($log->label(), 'canonical')->toString(),
       'tasks' => $tasks,
+      'children' => [$this->buildDeletionRow($plan, $grazing_event)],
     ];
   }
 
@@ -272,5 +274,24 @@ class GrazingPlanTimeline extends ControllerBase {
       ],
     ];
   }
+
+  /**
+   * Helper function for supplying grazing event rows with a delete button
+   * 
+   * @param \Drupal\plan\Entity\PlanInterface $plan
+   *   The plan entity.
+   * @param \Drupal\farm_grazing_plan\Bundle\GrazingEventInterface $grazing_event
+   *   The grazing event entity.
+   * 
+   * @return array
+   *   Returns an array representing a single row.
+   */
+  protected function buildDeletionRow(PlanInterface $plan, GrazingEventInterface $grazing_event) {
+    return [
+      'id' => $this->uuidService->generate(),
+      'label' => $grazing_event->label(),
+      'link' => Link::createFromRoute('Delete grazing event', 'farm_grazing_plan.remove_event', ['plan' => $plan->id(), 'assetId' => $grazing_event->id()])->toString(),
+    ];
+  }  
 
 }
