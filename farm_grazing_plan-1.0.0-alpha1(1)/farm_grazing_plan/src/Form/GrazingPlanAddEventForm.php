@@ -326,9 +326,7 @@ class GrazingPlanAddEventForm extends FormBase {
     $this->messenger()->addMessage($this->t('Added @grazing_event', ['@grazing_event' => $record->label()]));
     $form_state->setRedirect('entity.plan.canonical', ['plan' => $plan_id]);
 
-    // Reset state to default TRUE
-    \Drupal::state()->set('log_reschedule.shift_overlapping', TRUE);
-    \Drupal::logger('addevent')->notice('Shift Overlapping State reset to TRUE.');
+  
     }
     
 
