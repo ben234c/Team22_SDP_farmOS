@@ -141,6 +141,7 @@ class GrazingPlanTimeline extends ControllerBase {
    *   Json response of timeline data.
    */
   protected function buildTimeline(PlanInterface $plan, array $grazing_events_by_asset) {
+    $shift_overlapping = $this->state->set('log_reschedule.shift_overlapping', TRUE);
     $shift_overlapping = $this->state->get('log_reschedule.shift_overlapping', TRUE);
 
     $data = [];
