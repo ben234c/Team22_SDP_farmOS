@@ -14,7 +14,7 @@ use Drupal\plan\Entity\PlanInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
-
+use Drupal\Core\State\StateInterface;
 /**
  * Grazing plan timeline controller.
  */
@@ -141,7 +141,7 @@ class GrazingPlanTimeline extends ControllerBase {
    *   Json response of timeline data.
    */
   protected function buildTimeline(PlanInterface $plan, array $grazing_events_by_asset) {
-    $shift_overlapping = $this->state->get('log_reschedule.shift_overlapping', FALSE);
+    $shift_overlapping = $this->state->get('log_reschedule.shift_overlapping', TRUE);
 
     $data = [];
     foreach ($grazing_events_by_asset as $asset_id => $grazing_events) {
@@ -304,16 +304,21 @@ protected function shiftOverlappingLogs(array $grazing_events_by_asset) {
       });
       $last_end_time = null;
         foreach ($grazing_events as $grazing_event) {
-            $start_time = $grazing_event->get('start')->value;
-            $duration = $grazing_event->hasField('duration') ? $grazing_event->get('duration')->value * 3600 : 0;
-            $recovery = $grazing_event->hasField('recovery') ? $grazing_event->get('recovery')->value * 3600 : 0;
-            if ($start_time <= $last_end_time){
-              $grazing_event->set('start', $last_end_time);
-              $grazing_event->save();
-              \Drupal::logger('log')->notice("Shifted Grazing Event ID {$grazing_event->id()} to start at " . date('Y-m-d H:i:s', $last_end_time));
-              $start_time = $last_end_time;
+            $log = $grazing_event ->getLog();
+            $status = $log ->get('status')->value;
+            \Drupal::logger(channel:'log')->notice("status {$log->get('status')->value}");
+            if ($status === 'pending'){
+              $start_time = $grazing_event->get('start')->value;
+              $duration = $grazing_event->hasField('duration') ? $grazing_event->get('duration')->value * 3600 : 0;
+              $recovery = $grazing_event->hasField('recovery') ? $grazing_event->get('recovery')->value * 3600 : 0;
+              if ($start_time <= $last_end_time){
+                $grazing_event->set('start', $last_end_time);
+                $grazing_event->save();
+                \Drupal::logger('log')->notice("Shifted Grazing Event ID {$grazing_event->id()} to start at " . date('Y-m-d H:i:s', $last_end_time));
+                $start_time = $last_end_time;
+              }
+              $last_end_time = $start_time + $duration + $recovery;
             }
-            $last_end_time = $start_time + $duration + $recovery;
         }
       
     }
