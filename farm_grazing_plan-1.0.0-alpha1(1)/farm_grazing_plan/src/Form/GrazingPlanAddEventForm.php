@@ -306,6 +306,12 @@ class GrazingPlanAddEventForm extends FormBase {
     if ($form_state->hasAnyErrors()){
       return;
     }
+    $details = $form_state->getValue('details');
+    $enable_time_conflict = (bool)$form_state->getValue('enable_time_conflict');
+    $shift_overlapping = !$enable_time_conflict;
+    \Drupal::state()->set('log_reschedule.shift_overlapping', $shift_overlapping);
+    \Drupal::logger('addevent')->notice('enable_time_conflict: ' . ($enable_time_conflict ? 'TRUE' : 'FALSE'));
+    
     $plan_id = $form_state->get('plan_id');
     $log = $form_state->getValue('log');
     $record = PlanRecord::create([
@@ -319,6 +325,8 @@ class GrazingPlanAddEventForm extends FormBase {
     $record->save();
     $this->messenger()->addMessage($this->t('Added @grazing_event', ['@grazing_event' => $record->label()]));
     $form_state->setRedirect('entity.plan.canonical', ['plan' => $plan_id]);
+
+  
     }
     
 
