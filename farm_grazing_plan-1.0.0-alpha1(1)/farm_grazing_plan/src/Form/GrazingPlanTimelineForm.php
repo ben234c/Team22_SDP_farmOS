@@ -76,6 +76,7 @@ class GrazingPlanTimelineForm extends FormBase {
     $mode_options = [
       'asset' => $this->t('Asset'),
       'location' => $this->t('Location'),
+      
     ];
     $mode_default = 'asset';
     $form['options'] = [
@@ -93,6 +94,20 @@ class GrazingPlanTimelineForm extends FormBase {
         'wrapper' => 'timeline-wrapper',
       ],
     ];
+    //default state is shift
+    $shift_overlapping = !\Drupal::state()->get('log_reschedule.shift_overlapping', TRUE);
+    $form['options']['enable_time_conflict'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Enable time conflicts'),
+      '#description' => $this->t('When checked, grazing events can overlap in time. When unchecked, events will automatically shift to avoid conflicts.'),
+      '#default_value' => $shift_overlapping,
+      '#ajax' => [
+        'callback' => [$this, 'timelineCallback'],
+        'wrapper' => 'timeline-wrapper',
+      ],
+    ];
+
+
 
     // Add a wrapper for the timeline.
     $form['timeline'] = [
@@ -106,6 +121,12 @@ class GrazingPlanTimelineForm extends FormBase {
 
     // Get the selected display mode from form state.
     $display_mode = $form_state->getValue('mode', $mode_default);
+    //Update shift overlapping state if enable time conflict has changed
+    $enable_time_conflict = $form_state->getValue('enable_time_conflict', $shift_overlapping);
+    if($enable_time_conflict !== $shift_overlapping){
+      \Drupal::state()->set('log_reschedule.shift_overlapping', !$enable_time_conflict);
+      \Drupal::logger('farm_grazing_plan')->notice('Updated time conflict setting: ' . ($enable_time_conflict ? 'Enabled' : 'Disabled'));
+    }
 
     // Render the timeline.
     $row_url = Url::fromRoute("farm_grazing_plan.timeline_by_$display_mode", ['plan' => $plan->id()]);
@@ -123,6 +144,14 @@ class GrazingPlanTimelineForm extends FormBase {
     return $form;
   }
 
+
+
+
+
+
+
+
+
   /**
    * Ajax callback for timeline.
    */
@@ -134,7 +163,10 @@ class GrazingPlanTimelineForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-
+    $enable_time_conflict = $form_state->getValue('enable_time_conflict', FALSE);
+    \Drupal::state()->set('log_reschedule.shift_overlapping', !$enable_time_conflict);
+    \Drupal::logger('farm_grazing_plan')->notice('Updated time conflict setting on form submit: ' . ($enable_time_conflict ? 'Enabled' : 'Disabled'));
   }
 
 }
+
