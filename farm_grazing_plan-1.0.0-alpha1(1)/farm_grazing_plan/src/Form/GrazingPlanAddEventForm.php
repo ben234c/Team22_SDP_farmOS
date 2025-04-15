@@ -86,18 +86,6 @@ class GrazingPlanAddEventForm extends FormBase {
     }
     $form_state->set('plan_id', $plan->id());
 
-    $form['alert_options'] = [
-      '#type' => 'details',
-      '#title'=> $this->t('Alert Settings'),
-      '#open' => TRUE,
-    ];
-    //ADDED
-    $form['alert_options']['enable_time_conflict'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Enable time conflicts'),
-      //'#description' => $this->('When checked, you will enable time conflicts'),
-      '#default_value' => FALSE,
-    ];
 
 
     $form['log'] = [
@@ -291,10 +279,10 @@ class GrazingPlanAddEventForm extends FormBase {
           $existing_end = $existing_start + ($existing_duration * 3600);
           
           // checking for conflict -- new start is before existing end AND new end is after existing start
-          if ($start_time < $existing_end && $end_timestamp > $existing_start) {
-            $form_state->setErrorByName('details][start', $this->t("This time conflicts with an existing log",));
+//          if ($start_time < $existing_end && $end_timestamp > $existing_start) {
+//            $form_state->setErrorByName('details][start', $this->t("This time conflicts with an existing log",));
             break;
-          }
+//          }
         }
       }
     }
@@ -329,28 +317,4 @@ class GrazingPlanAddEventForm extends FormBase {
   
     }
     
-
-
-  //ADDED
-  /**
-   * Check if the proposed timestamp conflicts with existing logs
-   * @param int $proposed_timestamp
-   *  Proposed timestamp from user
-   * @param FormStateInterface $form_state
-   */
-  /**protected function checkTimeConflicts($proposed_timestamp){
-    $proposed_timestamp = getTimeStamp()
-    $query = $this->entityTypeManager->getStorage('log')->getQuery()
-    ->accessCheck(FALSE)
-    ->condition('timestamp', $proposed_timestamp)
-    ->range(0,1);
-    $results = $query->execute();
-    \Drupal::logger('log')->info('Checking conflicts for timestamp: ' . $proposed_timestamp . '. Found logs: ' . json_encode($results));
-
-    if (!empty($results)){
-      return TRUE;
-    }
-    return FALSE;
-
-  } */
 }
