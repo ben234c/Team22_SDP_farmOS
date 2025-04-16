@@ -309,6 +309,7 @@ class GrazingPlanAddEventForm extends FormBase {
               break;
             }
         }
+        }
       }
     }
   }
@@ -319,7 +320,7 @@ class GrazingPlanAddEventForm extends FormBase {
     if ($form_state->hasAnyErrors()){
       return;
     }
-    add_anyway = (bool)$form_state->getValue('add_anyways');
+    $add_anyway = (bool)$form_state->getValue('add_anyways');
 
     // If Add anyway was clicked, override the time conflict behavior.
     if ($add_anyway) {
