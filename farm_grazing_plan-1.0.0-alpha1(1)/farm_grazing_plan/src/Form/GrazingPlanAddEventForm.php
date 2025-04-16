@@ -130,10 +130,22 @@ class GrazingPlanAddEventForm extends FormBase {
     }
     $default_values = $this->grazingEventDefaultValues($log);
 
-    $form['details']['start'] = [
+    $form['details']['start'] = [ 
       '#type' => 'datetime',
       '#title' => $this->t('Planned start date/time'),
       '#default_value' => $default_values['start'],
+      '#required' => TRUE,
+    ];
+
+    // NEW
+    $form['details']['planned'] = [ 
+      '#type' => 'radios',
+      '#title' => $this->t('Planned/Actual'),
+      '#options' => [
+        0 => $this->t('Planned'),
+        1 => $this->t('Actual'),
+      ],
+      '#default_value' => $default_values['planned'],
       '#required' => TRUE,
     ];
 
@@ -183,6 +195,8 @@ class GrazingPlanAddEventForm extends FormBase {
   public function resetGrazingEventDetails(FormStateInterface $form_state) {
     $details_fields = [
       'start',
+      // NEW
+      'planned',
       'duration',
       'recovery',
     ];
@@ -213,6 +227,7 @@ class GrazingPlanAddEventForm extends FormBase {
       'start' => new DrupalDateTime('midnight', $this->currentUser()->getTimeZone()),
       'duration' => NULL,
       'recovery' => NULL,
+      'planned' => 0,
     ];
 
     // If a log was provided, load the start date from it.
@@ -334,6 +349,8 @@ class GrazingPlanAddEventForm extends FormBase {
       'start' => $form_state->getValue('start')->getTimestamp(),
       'duration' => $form_state->getValue('duration'),
       'recovery' => $form_state->getValue('recovery'),
+      // NEW
+      'planned' => $form_state->getValue('planned'),
     ]);
     $record->save();
     $this->messenger()->addMessage($this->t('Added @grazing_event', ['@grazing_event' => $record->label()]));

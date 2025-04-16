@@ -212,23 +212,31 @@ class GrazingPlanTimeline extends ControllerBase {
     $destination_url = $grazing_event->get('plan')->referencedEntities()[0]->toUrl()->toString();
     $edit_url = $grazing_event->toUrl('edit-form', ['query' => ['destination' => $destination_url]])->toString();
 
-    // Add a task for the grazing event duration.
-    $tasks[] = [
-      'id' => 'grazing-event--duration--' . $grazing_event->id(),
-      'edit_url' => $edit_url,
-      'start' => $grazing_event->get('start')->value,
-      'end' => $grazing_event->get('start')->value + ($grazing_event->get('duration')->value * 60 * 60),
-      'meta' => [
-        'stage' => 'duration',
-      ],
-      'classes' => [
-        'stage',
-        "stage--duration",
-      ],
-    ];
 
-    // Add a task for the recovery time.
-    if (!empty($grazing_event->get('recovery')->value)) {
+
+    // Tasks for planned grazing events.
+    // 0 corresponds to planned events.
+    // 0 will also be used for values that do not have a 'planned' value assigned to it, such as preexisting values.
+
+    // Duration
+    if (0==$grazing_event->get('planned')->value) {
+      $tasks[] = [
+        'id' => 'grazing-event--duration--' . $grazing_event->id(),
+        'edit_url' => $edit_url,
+        'start' => $grazing_event->get('start')->value,
+        'end' => $grazing_event->get('start')->value + ($grazing_event->get('duration')->value * 60 * 60),
+        'meta' => [
+          'stage' => 'duration',
+        ],
+        'classes' => [
+          'stage',
+          "stage--duration",
+        ],
+      ];
+    }
+
+    // Recovery
+    if (!empty($grazing_event->get('recovery')->value) && (0==$grazing_event->get('planned')->value)) {
       $tasks[] = [
         'id' => 'grazing-event--recovery--' . $grazing_event->id(),
         'edit_url' => $edit_url,
@@ -240,6 +248,43 @@ class GrazingPlanTimeline extends ControllerBase {
         'classes' => [
           'stage',
           "stage--recovery",
+        ],
+      ];
+    }
+
+    // Tasks for actual grazing events.
+    // 1 corresponds to actual events.
+
+    // Duration
+    if (1==$grazing_event->get('planned')->value) {
+      $tasks[] = [
+        'id' => 'grazing-event--duration--' . $grazing_event->id(),
+        'edit_url' => $edit_url,
+        'start' => $grazing_event->get('start')->value,
+        'end' => $grazing_event->get('start')->value + ($grazing_event->get('duration')->value * 60 * 60),
+        'meta' => [
+          'stage' => 'duration',
+        ],
+        'classes' => [
+          'stage',
+          "stage--actualduration",
+        ],
+      ];
+    } 
+    
+    // Recovery
+    if (!empty($grazing_event->get('recovery')->value) && (1==$grazing_event->get('planned')->value)) {
+      $tasks[] = [
+        'id' => 'grazing-event--recovery--' . $grazing_event->id(),
+        'edit_url' => $edit_url,
+        'start' => $grazing_event->get('start')->value + ($grazing_event->get('duration')->value * 60 * 60),
+        'end' => $grazing_event->get('start')->value + ($grazing_event->get('duration')->value * 60 * 60) + ($grazing_event->get('recovery')->value * 60 * 60),
+        'meta' => [
+          'stage' => 'recovery',
+        ],
+        'classes' => [
+          'stage',
+          "stage--actualrecovery",
         ],
       ];
     }
