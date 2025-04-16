@@ -155,7 +155,13 @@ class GrazingPlanAddEventForm extends FormBase {
       '#max' => 8760,
       '#default_value' => $default_values['recovery'],
     ];
-
+    
+    $form['details']['add_anyway'] = [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Add anyways: if event overlaps, add and shift downstream events'),
+        '#default_value' => FALSE,
+      ];
+    
     $form['submit'] = [
       '#type' => 'submit',
       '#value' => $this->t('Save'),
@@ -279,10 +285,14 @@ class GrazingPlanAddEventForm extends FormBase {
           $existing_end = $existing_start + ($existing_duration * 3600);
           
           // checking for conflict -- new start is before existing end AND new end is after existing start
-//          if ($start_time < $existing_end && $end_timestamp > $existing_start) {
-//            $form_state->setErrorByName('details][start', $this->t("This time conflicts with an existing log",));
-            break;
-//          }
+          if ($start_time < $existing_end && $end_timestamp > $existing_start) {
+            $add_anyway = (bool)$form_state->getValue('add_anyway');
+            if (!$add_anyway ){
+              $form_state->setErrorByName('details][start', $this->t("This time conflicts with an existing log",));
+            }
+            else{
+              break;
+            }
         }
       }
     }
@@ -294,6 +304,21 @@ class GrazingPlanAddEventForm extends FormBase {
     if ($form_state->hasAnyErrors()){
       return;
     }
+    add_anyway = (bool)$form_state->getValue('add_anyways');
+
+    // If Add anyway was clicked, override the time conflict behavior.
+    if ($add_anyway) {
+      // Set shift_overlapping to false, meaning the new event is added
+      // and any overlapping logs will remain overlapped.
+      $shift_overlapping = TRUE;
+    }
+    else {
+      $enable_time_conflict = (bool)$form_state->getValue('enable_time_conflict');
+      // If enable_time_conflict is enabled, then we want to keep the new event overlapped.
+      // This means shift_overlapping should be false.
+      $shift_overlapping = !$enable_time_conflict;
+    }
+    
     $details = $form_state->getValue('details');
     $enable_time_conflict = (bool)$form_state->getValue('enable_time_conflict');
     $shift_overlapping = !$enable_time_conflict;
