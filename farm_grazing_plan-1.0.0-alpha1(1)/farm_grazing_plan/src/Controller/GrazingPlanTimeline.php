@@ -145,11 +145,14 @@ class GrazingPlanTimeline extends ControllerBase {
   protected function buildTimeline(PlanInterface $plan, array $grazing_events_by_asset) {
     // Retrieve the state flag for shifting overlapping logs.
     $shift_overlapping = $this->state->get('log_reschedule.shift_overlapping', TRUE);
-    if ($shift_overlapping) {
-      \Drupal::logger('buildTimeline')->notice("Running shiftOverlappingLogs() in buildTimeline");
+     if ($shift_overlapping) {
+      \Drupal::logger('buildTimeline')->notice($shift_overlapping ? 'TRUE' : 'FALSE');
+      \Drupal::logger('build')
+    ->notice(sprintf(
+      $shift_overlapping ? 'TRUE' : 'FALSE'
+    ));
       $this->shiftOverlappingLogs($grazing_events_by_asset);
     }
-
     $data = [];
     foreach ($grazing_events_by_asset as $asset_id => $grazing_events) {
       // Load the asset.
@@ -372,7 +375,9 @@ class GrazingPlanTimeline extends ControllerBase {
         // Only shift events whose log status is "pending".
         $log = $grazing_event->getLog();
         $status = $log->get('status')->value;
-        if ($status === 'pending') {
+        if ($status === 'pending'
+          && $grazing_event->hasField('planned')
+          && (int) $grazing_event->get('planned')->value === 0)) {
           $start_time = $grazing_event->get('start')->value;
           $duration = $grazing_event->hasField('duration') ? $grazing_event->get('duration')->value * 3600 : 0;
           $recovery = $grazing_event->hasField('recovery') ? $grazing_event->get('recovery')->value * 3600 : 0;
