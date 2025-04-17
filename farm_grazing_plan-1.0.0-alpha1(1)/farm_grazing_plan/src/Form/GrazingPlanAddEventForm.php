@@ -86,19 +86,6 @@ class GrazingPlanAddEventForm extends FormBase {
     }
     $form_state->set('plan_id', $plan->id());
 
-    // Alert options: enable time conflict checking.
-    $form['alert_options'] = [
-      '#type' => 'details',
-      '#title' => $this->t('Alert Settings'),
-      '#open' => TRUE,
-    ];
-    $form['alert_options']['enable_time_conflict'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Enable time conflicts'),
-      // When checked, time conflicts are not validated.
-      '#default_value' => FALSE,
-    ];
-
     // Movement log field.
     $form['log'] = [
       '#type' => 'entity_autocomplete',
@@ -181,7 +168,14 @@ class GrazingPlanAddEventForm extends FormBase {
       '#max' => 8760,
       '#default_value' => $default_values['recovery'],
     ];
-
+    
+    // Add Anyway 
+    $form['details']['add_anyway'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Add anyways: if event overlaps, add and shift downstream events'),
+      '#default_value' => FALSE,
+    ];
+    
     // Submit button.
     $form['submit'] = [
       '#type' => 'submit',
@@ -304,8 +298,13 @@ class GrazingPlanAddEventForm extends FormBase {
           $existing_end = $existing_start + ($existing_duration * 3600);
           // Check for overlapping times.
           if ($start_time < $existing_end && $end_timestamp > $existing_start) {
-            $form_state->setErrorByName('details][start', $this->t("This time conflicts with an existing log"));
-            break;
+            $add_anyway = (bool)$form_state->getValue('add_anyway');
+            if (!$add_anyway ){
+              $form_state->setErrorByName('details][start', $this->t("This time conflicts with an existing log",));
+            }
+            else{
+              break;
+          }
           }
         }
       }
@@ -321,8 +320,10 @@ class GrazingPlanAddEventForm extends FormBase {
     }
 
     // Handle the time conflict setting.
+    $add_anyway = (bool) $form_state->getValue('add_anyway');
     $enable_time_conflict = (bool) $form_state->getValue('enable_time_conflict');
-    $shift_overlapping = !$enable_time_conflict;
+    $shift_overlapping = $add_anyway ? TRUE : !$enable_time_conflict;
+    
     \Drupal::state()->set('log_reschedule.shift_overlapping', $shift_overlapping);
     \Drupal::logger('addevent')->notice('enable_time_conflict: ' . ($enable_time_conflict ? 'TRUE' : 'FALSE'));
 
@@ -346,7 +347,6 @@ class GrazingPlanAddEventForm extends FormBase {
 
     // Reset the overlapping shift state to default (TRUE).
     \Drupal::state()->set('log_reschedule.shift_overlapping', TRUE);
-    \Drupal::logger('addevent')->notice('Shift Overlapping State reset to TRUE.');
   }
 
 }
