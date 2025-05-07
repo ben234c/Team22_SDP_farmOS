@@ -11,8 +11,3 @@ dependencies:
   - farm_season
   - farm_timeline
   - plan
-
-# Information added by Drupal.org packaging script on 2024-09-24
-version: '1.0.0-alpha1'
-project: 'farm_grazing_plan'
-datestamp: 1727192961
